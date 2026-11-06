@@ -1,0 +1,77 @@
+name: "Fork: Windows build"
+
+# Builds this fork's unsigned Windows x64 installers (NSIS .exe and .msi) on
+# demand, through upstream's reusable build workflow. The installers are kept
+# as run artifacts for 30 days. With "release" ticked they are also published
+# as a GitHub release tagged v<version>-fork.<n>, which can be downloaded
+# without signing in to GitHub. Upstream's other workflows are disabled in the
+# fork's Actions settings, so pushes don't start them.
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish the installers as a GitHub release"
+        type: boolean
+        default: false
+
+jobs:
+  windows:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build.yml
+    with:
+      platform: "windows-latest"
+      target: "x86_64-pc-windows-msvc"
+      build-args: ""
+      sign-binaries: false
+      asset-prefix: "handy-fork"
+      upload-artifacts: true
+    secrets: inherit
+
+  release:
+    if: inputs.release
+    needs: windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download the installers
+        uses: actions/download-artifact@v8
+        with:
+          name: handy-fork-x86_64-pc-windows-msvc
+          path: dist
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r .version src-tauri/tauri.conf.json)
+          n=1
+          while git ls-remote --exit-code --tags origin "refs/tags/v${version}-fork.${n}" >/dev/null; do
+            n=$((n + 1))
+          done
+          tag="v${version}-fork.${n}"
+
+          mapfile -t files < <(find dist -type f \( -name '*.exe' -o -name '*.msi' \) | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No installers in the build artifact" >&2
+            exit 1
+          fi
+
+          cat > notes.md <<EOF
+          Handy ${version} built from this fork (commit ${GITHUB_SHA::7}).
+
+          Adds a second shortcut, **Transcribe Without Translating**, which records and pastes the transcription in the spoken language while **Translate to English** stays on for the regular shortcut. It appears under Translate to English in the model settings (Settings → General) once that toggle is on; the Windows default is Ctrl+Alt+Space.
+
+          - Windows x64 only: the \`-setup.exe\` (NSIS) or the \`.msi\` installer.
+          - The installers are unsigned, so SmartScreen warns the first time: More info → Run anyway.
+          - Update checks are off, so the app never replaces itself with an upstream release. Install a newer fork release over this one to update.
+          EOF
+
+          gh release create "$tag" "${files[@]}" \
+            --target "$GITHUB_SHA" \
+            --title "Handy ${version} (fork ${n})" \
+            --notes-file notes.md
