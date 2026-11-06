@@ -21,8 +21,8 @@ pub fn init_shortcuts(app: &AppHandle) {
         if id == "cancel" {
             continue; // Skip cancel shortcut, it will be registered dynamically
         }
-        // Skip post-processing shortcut when the feature is disabled
-        if id == "transcribe_with_post_process" && !user_settings.post_process_enabled {
+        // Skip bindings whose feature is off (post-processing, translation)
+        if !user_settings.is_binding_enabled(&id) {
             continue;
         }
         let binding = user_settings
@@ -185,6 +185,8 @@ mod tests {
             "ctrl+shift+space",
             "ctrl+alt+space",
             "ctrl+alt+shift+space",
+            "ctrl+alt+super+space",
+            "ctrl+option+command+space",
             "alt+space",
             "escape",
         ] {

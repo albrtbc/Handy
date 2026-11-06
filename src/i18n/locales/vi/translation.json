@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Phím tắt xử lý sau",
             "description": "Tùy chọn: Phím tắt chuyên dụng luôn áp dụng xử lý sau bằng AI cho bản chuyển đổi của bạn."
+          },
+          "transcribe_without_translation": {
+            "name": "Phím tắt chuyển đổi không dịch",
+            "description": "Tùy chọn: Phím tắt riêng giữ nguyên ngôn ngữ bạn đã nói và bỏ qua bước dịch sang tiếng Anh cho bản ghi này."
           }
         },
         "errors": {

@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Tasto di post-elaborazione",
             "description": "Facoltativo: Un tasto di scelta rapida dedicato che applica sempre la post-elaborazione IA alla trascrizione."
+          },
+          "transcribe_without_translation": {
+            "name": "Scorciatoia Trascrizione senza traduzione",
+            "description": "Facoltativo: una scorciatoia dedicata che mantiene la lingua in cui hai parlato e salta la traduzione in inglese per questa registrazione."
           }
         },
         "errors": {

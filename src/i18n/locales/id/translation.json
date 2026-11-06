@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Pintasan Pascaproses",
             "description": "Opsional: pintasan khusus yang selalu menerapkan pascaproses AI pada transkripsi Anda."
+          },
+          "transcribe_without_translation": {
+            "name": "Pintasan Transkripsi Tanpa Terjemahan",
+            "description": "Opsional: Pintasan khusus yang mempertahankan bahasa yang Anda ucapkan dan melewati terjemahan ke Bahasa Inggris untuk rekaman ini."
           }
         },
         "errors": {

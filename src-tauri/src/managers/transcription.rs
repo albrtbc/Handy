@@ -818,7 +818,7 @@ impl TranscriptionManager {
     /// worker idles until finalize/cancel and reports `None` so the caller
     /// falls back to batch transcription. Frames sent before the decode begins
     /// queue on the channel and are not lost.
-    pub fn start_stream(&self) {
+    pub fn start_stream(&self, options: RecordingOptions) {
         if self.router.is_open() || self.active_stream_worker.load(Ordering::Acquire) != 0 {
             warn!("start_stream called while a stream worker is already active");
             return;
@@ -836,7 +836,7 @@ impl TranscriptionManager {
         self.stream_active.store(false, Ordering::Release);
 
         let manager = self.clone();
-        thread::spawn(move || manager.run_stream_worker(rx, cancelled, worker_id));
+        thread::spawn(move || manager.run_stream_worker(rx, cancelled, worker_id, options));
     }
 
     fn run_stream_worker(
@@ -844,6 +844,7 @@ impl TranscriptionManager {
         rx: mpsc::Receiver<StreamCmd>,
         cancelled: Arc<AtomicBool>,
         worker_id: u64,
+        options: RecordingOptions,
     ) {
         let _worker = StreamWorkerGuard {
             worker_id,
@@ -889,7 +890,7 @@ impl TranscriptionManager {
             ModelTraits::of(&info),
             get_settings(&self.app_handle).long_form_chunking,
         );
-        let Some(mut session) = LiveSession::begin(self, mode, &info, &model_id) else {
+        let Some(mut session) = LiveSession::begin(self, mode, &info, &model_id, options) else {
             // Nothing to decode live: the recording is transcribed in batch.
             self.router.clear();
             drain_until_finalize(rx);
@@ -978,15 +979,22 @@ impl TranscriptionManager {
     /// Transcribe a whole clip in batch: a re-transcribed history entry, or
     /// a file from the CLI.
     pub fn transcribe(&self, audio: Vec<f32>) -> Result<String> {
-        Ok(self.complete(Instant::now(), audio, None)?.text)
+        Ok(self
+            .complete(Instant::now(), audio, None, RecordingOptions::default())?
+            .text)
     }
 
     /// Transcribe a finished recording: what its live decode produced, or a
     /// batch run of the whole recording when there is no live result.
-    pub fn transcribe_recording(&self, samples: Vec<f32>) -> Result<Transcription> {
+    /// `options` must match what the recording's [`Self::start_stream`] got.
+    pub fn transcribe_recording(
+        &self,
+        samples: Vec<f32>,
+        options: RecordingOptions,
+    ) -> Result<Transcription> {
         let started = Instant::now();
         let live = self.finalize_live(samples.len())?;
-        self.complete(started, samples, live)
+        self.complete(started, samples, live, options)
     }
 
     /// The final text of one transcription, from its live result or else a
@@ -996,6 +1004,7 @@ impl TranscriptionManager {
         started: Instant,
         audio: Vec<f32>,
         live: Option<RunOutcome>,
+        options: RecordingOptions,
     ) -> Result<Transcription> {
         #[cfg(debug_assertions)]
         if std::env::var("HANDY_FORCE_TRANSCRIPTION_FAILURE").is_ok() {
@@ -1017,9 +1026,9 @@ impl TranscriptionManager {
 
         let outcome = match live {
             Some(outcome) => outcome,
-            None => self.decode_batch(audio)?,
+            None => self.decode_batch(audio, options)?,
         };
-        let settings = get_settings(&self.app_handle);
+        let settings = self.settings_for(options);
         let language = outcome
             .setup
             .spoken_language(outcome.model_detected_language.as_deref());
@@ -1058,21 +1067,27 @@ impl TranscriptionManager {
         })
     }
 
+    /// The settings one transcription runs with: the saved settings with
+    /// its recording's `options` applied.
+    fn settings_for(&self, options: RecordingOptions) -> AppSettings {
+        options.apply(get_settings(&self.app_handle))
+    }
+
     /// Decode a whole clip with the loaded model, loading it first if a load
     /// is under way.
-    fn decode_batch(&self, audio: Vec<f32>) -> Result<RunOutcome> {
+    fn decode_batch(&self, audio: Vec<f32>, options: RecordingOptions) -> Result<RunOutcome> {
         // A cancel from here on (during the model-load wait or chunk planning
         // included) stops every run of this transcription.
         let mark = self.engine.cancel_mark();
         self.touch_activity();
-        let batch = self.batch_context(&audio)?;
+        let batch = self.batch_context(&audio, options)?;
         self.transcribe_cpp(mark, batch, audio)
     }
 
     /// Waits out any model load, then reads what a batch transcription of
     /// `audio` runs with: the loaded model, the settings, and the language
     /// resolved for it.
-    fn batch_context(&self, audio: &[f32]) -> Result<BatchContext> {
+    fn batch_context(&self, audio: &[f32], options: RecordingOptions) -> Result<BatchContext> {
         {
             let mut is_loading = self.is_loading.lock().unwrap();
             while *is_loading {
@@ -1083,7 +1098,7 @@ impl TranscriptionManager {
             return Err(anyhow::anyhow!("Model is not loaded for transcription."));
         };
 
-        let settings = get_settings(&self.app_handle);
+        let settings = self.settings_for(options);
         // Validate against the model that's actually loaded (which can differ
         // from settings.selected_model when a caller loaded a specific model —
         // e.g. the --transcribe-file path's --model), not the persisted
@@ -1231,6 +1246,24 @@ struct BatchContext {
     settings: AppSettings,
     active_model: String,
     setup: RunSetup,
+}
+
+/// What the shortcut that started a recording asks of it on top of the
+/// settings. The default changes nothing.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RecordingOptions {
+    /// Keep the spoken language even when "Translate to English" is on.
+    pub skip_translation: bool,
+}
+
+impl RecordingOptions {
+    /// `settings` as this recording runs with them.
+    fn apply(self, mut settings: AppSettings) -> AppSettings {
+        if self.skip_translation {
+            settings.translate_to_english = false;
+        }
+        settings
+    }
 }
 
 /// A finished transcription.
@@ -1969,6 +2002,41 @@ mod tests {
 
     fn languages(codes: &[&str]) -> Vec<String> {
         codes.iter().map(|code| (*code).to_string()).collect()
+    }
+
+    #[test]
+    fn skipping_translation_transcribes_in_the_spoken_language() {
+        let settings = AppSettings {
+            translate_to_english: true,
+            ..Default::default()
+        };
+        let options = RecordingOptions {
+            skip_translation: true,
+        };
+
+        let applied = options.apply(settings);
+
+        assert!(!applied.translate_to_english);
+        let (task, target_language) =
+            cpp_translation_task(applied.translate_to_english, true, Some("es"));
+        assert!(matches!(task, Task::Transcribe));
+        assert_eq!(target_language, None);
+    }
+
+    #[test]
+    fn default_recording_options_keep_translation_as_set() {
+        let settings = AppSettings {
+            translate_to_english: true,
+            ..Default::default()
+        };
+
+        let applied = RecordingOptions::default().apply(settings);
+
+        assert!(applied.translate_to_english);
+        let (task, target_language) =
+            cpp_translation_task(applied.translate_to_english, true, Some("es"));
+        assert!(matches!(task, Task::Translate));
+        assert_eq!(target_language.as_deref(), Some("en"));
     }
 
     #[test]

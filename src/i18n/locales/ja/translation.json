@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "後処理のショートカット",
             "description": "文字起こしに常に AI 後処理を適用するキーボードショートカット。 (任意)"
+          },
+          "transcribe_without_translation": {
+            "name": "翻訳しない文字起こしのショートカット",
+            "description": "任意：話した言語のまま文字起こしする専用ショートカットです。この録音では英語への翻訳をスキップします。"
           }
         },
         "errors": {

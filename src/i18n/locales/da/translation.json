@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Genvej til efterbehandling",
             "description": "Valgfrit: En dedikeret genvej, der altid anvender AI-efterbehandling på din transskription."
+          },
+          "transcribe_without_translation": {
+            "name": "Genvej til transskription uden oversættelse",
+            "description": "Valgfri: en særskilt genvej, der bevarer det sprog, du talte, og springer oversættelse til engelsk over for denne optagelse."
           }
         },
         "errors": {

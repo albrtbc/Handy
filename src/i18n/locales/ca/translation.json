@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Drecera de postprocessament",
             "description": "Opcional: una drecera específica que sempre aplica postprocessament amb IA a la transcripció."
+          },
+          "transcribe_without_translation": {
+            "name": "Drecera de transcripció sense traducció",
+            "description": "Opcional: una drecera específica que manté l'idioma en què heu parlat i omet la traducció a l'anglès en aquest enregistrament."
           }
         },
         "errors": {

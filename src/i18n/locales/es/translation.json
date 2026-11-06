@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Tecla de post procesamiento",
             "description": "Opcional: Una tecla de acceso rápido dedicada que siempre aplica post procesamiento con IA a tu transcripción."
+          },
+          "transcribe_without_translation": {
+            "name": "Atajo de transcripción sin traducir",
+            "description": "Opcional: un atajo dedicado que mantiene el idioma en el que hablaste y omite la traducción al inglés en esa grabación."
           }
         },
         "errors": {

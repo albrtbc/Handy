@@ -20,6 +20,11 @@ pub struct CliArgs {
     #[arg(long)]
     pub toggle_post_process: bool,
 
+    /// Toggle transcription without translation on/off, keeping the spoken
+    /// language even with "Translate to English" on (sent to running instance)
+    #[arg(long)]
+    pub toggle_transcription_without_translation: bool,
+
     /// Cancel the current operation (sent to running instance)
     #[arg(long)]
     pub cancel: bool,

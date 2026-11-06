@@ -8,7 +8,7 @@ use transcribe_cpp::Transcript;
 
 use super::{
     agreed_language, engine_error, post_process_transcription_text, real_time_factor, BatchContext,
-    Transcription, TranscriptionManager,
+    RecordingOptions, Transcription, TranscriptionManager,
 };
 use crate::audio_toolkit::chunking::Chunker;
 use crate::engine_supervisor::EngineError;
@@ -57,7 +57,7 @@ impl TranscriptionManager {
             active_model,
             setup,
             ..
-        } = self.batch_context(&audio)?;
+        } = self.batch_context(&audio, RecordingOptions::default())?;
 
         let backend = settings.vad_backend;
         let app_handle = self.app_handle.clone();

@@ -577,7 +577,10 @@ pub struct TranscriptionCoordinator {
 }
 
 pub fn is_transcribe_binding(id: &str) -> bool {
-    id == "transcribe" || id == "transcribe_with_post_process"
+    matches!(
+        id,
+        "transcribe" | "transcribe_with_post_process" | "transcribe_without_translation"
+    )
 }
 
 impl TranscriptionCoordinator {
@@ -782,6 +785,19 @@ fn stop(app: &AppHandle, binding_id: &str, hotkey_string: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_transcribe_binding_goes_through_the_coordinator() {
+        for id in [
+            "transcribe",
+            "transcribe_with_post_process",
+            "transcribe_without_translation",
+        ] {
+            assert!(is_transcribe_binding(id), "{id}");
+        }
+        assert!(!is_transcribe_binding("cancel"));
+        assert!(!is_transcribe_binding("test"));
+    }
 
     #[test]
     fn push_to_talk_release_while_recording_defers_release() {

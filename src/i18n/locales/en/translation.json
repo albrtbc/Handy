@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Post-Processing Hotkey",
             "description": "Optional: A dedicated hotkey that always applies AI post-processing to your transcription."
+          },
+          "transcribe_without_translation": {
+            "name": "Transcribe Without Translating",
+            "description": "Optional: A dedicated shortcut that keeps the language you spoke, skipping Translate to English for that recording."
           }
         },
         "errors": {

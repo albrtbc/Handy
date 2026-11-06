@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "後處理快捷鍵",
             "description": "可選：專用快捷鍵，使用時一律對轉錄結果套用 AI 後處理"
+          },
+          "transcribe_without_translation": {
+            "name": "不翻譯的轉錄快捷鍵",
+            "description": "選用：專用快捷鍵，保留您所說的語言，並在此次錄音中略過翻譯為英語。"
           }
         },
         "errors": {

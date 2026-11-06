@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Raccourci de post-traitement",
             "description": "Facultatif : Un raccourci dédié qui applique toujours le post-traitement IA à votre transcription."
+          },
+          "transcribe_without_translation": {
+            "name": "Raccourci de transcription sans traduction",
+            "description": "Facultatif : Un raccourci dédié qui conserve la langue dans laquelle vous avez parlé et ignore la traduction en anglais pour cet enregistrement."
           }
         },
         "errors": {

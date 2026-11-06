@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "후처리 단축키",
             "description": "선택 사항: 항상 AI 후처리를 적용하는 전용 단축키입니다."
+          },
+          "transcribe_without_translation": {
+            "name": "번역 없이 변환 단축키",
+            "description": "선택 사항: 말한 언어를 그대로 유지하고 이 녹음에서는 영어 번역을 건너뛰는 전용 단축키입니다."
           }
         },
         "errors": {

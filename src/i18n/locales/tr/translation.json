@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Son İşlem Kısayolu",
             "description": "İsteğe bağlı: Transkripsiyonunuza her zaman yapay zekâ ile son işlem uygulayan özel bir kısayol tuşu."
+          },
+          "transcribe_without_translation": {
+            "name": "Çevirisiz Transkripsiyon Kısayolu",
+            "description": "İsteğe bağlı: Konuştuğunuz dili koruyan ve bu kayıt için İngilizce'ye çeviriyi atlayan özel bir kısayol."
           }
         },
         "errors": {

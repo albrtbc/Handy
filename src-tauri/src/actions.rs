@@ -7,7 +7,7 @@ use crate::managers::history::HistoryManager;
 use crate::managers::model::ModelManager;
 use crate::managers::transcription::policy::{live_decode, LiveDecode, ModelTraits};
 use crate::managers::transcription::StreamWorkKind;
-use crate::managers::transcription::{Transcription, TranscriptionManager};
+use crate::managers::transcription::{RecordingOptions, Transcription, TranscriptionManager};
 use crate::notices::{self, Notice, NoticeCode, NoticeSource};
 use crate::settings::{get_settings, AppSettings, OverlayStyle, APPLE_INTELLIGENCE_PROVIDER_ID};
 use crate::shortcut;
@@ -134,6 +134,16 @@ pub trait ShortcutAction: Send + Sync {
 // Transcribe Action
 struct TranscribeAction {
     post_process: bool,
+    /// Keep the spoken language even with "Translate to English" on.
+    skip_translation: bool,
+}
+
+impl TranscribeAction {
+    fn recording_options(&self) -> RecordingOptions {
+        RecordingOptions {
+            skip_translation: self.skip_translation,
+        }
+    }
 }
 
 /// Field name for structured output JSON schema
@@ -592,7 +602,7 @@ impl ShortcutAction for TranscribeAction {
             long_form: false,
         };
         if live_decode(expected_model, settings.long_form_chunking) != LiveDecode::None {
-            tm.start_stream();
+            tm.start_stream(self.recording_options());
         }
         let plan_elapsed = plan_started.elapsed();
 
@@ -737,6 +747,7 @@ impl ShortcutAction for TranscribeAction {
 
         let binding_id = binding_id.to_string(); // Clone binding_id for the async task
         let post_process = self.post_process;
+        let recording_options = self.recording_options();
         let cancel_generation = rm.cancel_generation();
 
         tauri::async_runtime::spawn(async move {
@@ -787,7 +798,7 @@ impl ShortcutAction for TranscribeAction {
                     // otherwise a batch run of the samples. A cancel is surfaced
                     // as an error, so it never starts a batch run.
                     let transcription_time = Instant::now();
-                    let transcription_result = tm.transcribe_recording(samples);
+                    let transcription_result = tm.transcribe_recording(samples, recording_options);
 
                     // Await WAV save and verify
                     let wav_saved = match wav_handle.await {
@@ -1086,11 +1097,22 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
         "transcribe".to_string(),
         Arc::new(TranscribeAction {
             post_process: false,
+            skip_translation: false,
         }) as Arc<dyn ShortcutAction>,
     );
     map.insert(
         "transcribe_with_post_process".to_string(),
-        Arc::new(TranscribeAction { post_process: true }) as Arc<dyn ShortcutAction>,
+        Arc::new(TranscribeAction {
+            post_process: true,
+            skip_translation: false,
+        }) as Arc<dyn ShortcutAction>,
+    );
+    map.insert(
+        "transcribe_without_translation".to_string(),
+        Arc::new(TranscribeAction {
+            post_process: false,
+            skip_translation: true,
+        }) as Arc<dyn ShortcutAction>,
     );
     map.insert(
         "cancel".to_string(),
