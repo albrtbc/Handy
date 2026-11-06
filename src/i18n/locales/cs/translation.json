@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Klávesa pro následné zpracování",
             "description": "Volitelné: Vyhrazená klávesová zkratka, která vždy použije AI následné zpracování na váš přepis."
+          },
+          "transcribe_without_translation": {
+            "name": "Zkratka přepisu bez překladu",
+            "description": "Volitelné: samostatná zkratka, která zachová jazyk, kterým jste mluvili, a pro tento záznam přeskočí překlad do angličtiny."
           }
         },
         "errors": {

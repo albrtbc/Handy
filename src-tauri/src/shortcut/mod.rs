@@ -311,7 +311,7 @@ pub fn resume_all_shortcuts(app: &AppHandle) {
         if id == "cancel" {
             continue;
         }
-        if id == "transcribe_with_post_process" && !settings.post_process_enabled {
+        if !settings.is_binding_enabled(id) {
             continue;
         }
         if let Err(e) = register_shortcut(app, binding.clone()) {
@@ -506,8 +506,8 @@ fn register_all_shortcuts_for_implementation(
             continue;
         }
 
-        // Skip post-processing shortcut when the feature is disabled
-        if id == "transcribe_with_post_process" && !current_settings.post_process_enabled {
+        // Skip bindings whose feature is off (post-processing, translation)
+        if !current_settings.is_binding_enabled(id) {
             continue;
         }
 
@@ -693,7 +693,22 @@ pub fn apply_window_theme(app: &AppHandle, theme: Theme) {
 pub fn change_translate_to_english_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     settings.translate_to_english = enabled;
-    settings::write_settings(&app, settings);
+    settings::write_settings(&app, settings.clone());
+
+    // The "without translation" shortcut only exists while translation is on
+    if let Some(binding) = settings
+        .bindings
+        .get("transcribe_without_translation")
+        .cloned()
+    {
+        if enabled {
+            let _ = register_shortcut(&app, binding);
+        } else {
+            let _ = unregister_shortcut(&app, binding);
+        }
+    }
+
+    crate::secure_input::reconcile_fallback(&app);
     Ok(())
 }
 

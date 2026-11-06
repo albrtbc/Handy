@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Nachbearbeitungs-Tastenkürzel",
             "description": "Optional: Ein dediziertes Tastenkürzel, das immer die KI-Nachbearbeitung auf deine Transkription anwendet."
+          },
+          "transcribe_without_translation": {
+            "name": "Tastenkürzel für Transkription ohne Übersetzung",
+            "description": "Optional: Ein eigenes Tastenkürzel, das die Sprache beibehält, in der du gesprochen hast, und für diese Aufnahme die Übersetzung ins Englische überspringt."
           }
         },
         "errors": {

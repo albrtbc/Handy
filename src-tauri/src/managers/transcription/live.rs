@@ -10,12 +10,12 @@ use transcribe_cpp::StreamOptions;
 use super::chunked::{ChunkSetup, ChunkedDecode, PendingSetup};
 use super::policy::LiveDecode;
 use super::{
-    emit_stream_text, join_chunks, lock_perf, PreviewScript, RunOutcome, RunSetup,
-    StreamFinalizeReply, StreamPerf, TranscriptionManager,
+    emit_stream_text, join_chunks, lock_perf, PreviewScript, RecordingOptions, RunOutcome,
+    RunSetup, StreamFinalizeReply, StreamPerf, TranscriptionManager,
 };
 use crate::audio_toolkit::OutputLanguageEvidence;
 use crate::engine_supervisor::{EngineError, LoadedInfo, StreamHandle, StreamProgress};
-use crate::settings::{get_settings, AppSettings};
+use crate::settings::AppSettings;
 
 /// One recording's live decode.
 pub(super) struct LiveSession<'a> {
@@ -41,13 +41,14 @@ impl<'a> LiveSession<'a> {
         mode: LiveDecode,
         info: &LoadedInfo,
         model_id: &str,
+        options: RecordingOptions,
     ) -> Option<Self> {
         if mode == LiveDecode::None {
             return None;
         }
         // The same run setup as the batch path: task + language gated
         // against what the model actually advertises.
-        let settings = get_settings(&tm.app_handle);
+        let settings = tm.settings_for(options);
         let plan = tm.language_plan(&settings, model_id, info);
         let decoder = match mode {
             LiveDecode::None => unreachable!("returned above"),

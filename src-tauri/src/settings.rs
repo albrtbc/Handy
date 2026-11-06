@@ -988,6 +988,27 @@ pub fn get_default_settings() -> AppSettings {
             current_binding: default_post_process_shortcut.to_string(),
         },
     );
+    #[cfg(target_os = "windows")]
+    let default_without_translation_shortcut = "ctrl+alt+space";
+    #[cfg(target_os = "macos")]
+    let default_without_translation_shortcut = "ctrl+option+command+space";
+    #[cfg(target_os = "linux")]
+    let default_without_translation_shortcut = "ctrl+alt+super+space";
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    let default_without_translation_shortcut = "ctrl+alt+space";
+
+    bindings.insert(
+        "transcribe_without_translation".to_string(),
+        ShortcutBinding {
+            id: "transcribe_without_translation".to_string(),
+            name: "Transcribe Without Translating".to_string(),
+            description:
+                "Converts your speech into text in the language you spoke, even with Translate to English on."
+                    .to_string(),
+            default_binding: default_without_translation_shortcut.to_string(),
+            current_binding: default_without_translation_shortcut.to_string(),
+        },
+    );
     bindings.insert(
         "cancel".to_string(),
         ShortcutBinding {
@@ -1085,6 +1106,17 @@ impl AppSettings {
     pub fn language_detection_window_samples(&self) -> usize {
         let (min, max) = LANGUAGE_DETECTION_WINDOW_SECS.into_inner();
         self.language_detection_window_secs.clamp(min, max) as usize * 16_000
+    }
+
+    /// Whether binding `id` should be registered: a binding tied to a feature
+    /// is registered only while that feature is on. (Cancel is registered
+    /// separately, only while recording.)
+    pub fn is_binding_enabled(&self, id: &str) -> bool {
+        match id {
+            "transcribe_with_post_process" => self.post_process_enabled,
+            "transcribe_without_translation" => self.translate_to_english,
+            _ => true,
+        }
     }
 
     pub fn active_post_process_provider(&self) -> Option<&PostProcessProvider> {
@@ -1664,6 +1696,42 @@ mod tests {
             defaults.bindings["transcribe_with_post_process"].current_binding,
             "ctrl+alt+shift+space",
         );
+        assert_eq!(
+            defaults.bindings["transcribe_without_translation"].current_binding,
+            "ctrl+alt+super+space",
+        );
+    }
+
+    #[test]
+    fn the_without_translation_binding_follows_translate_to_english() {
+        let mut settings = get_default_settings();
+        assert!(settings
+            .bindings
+            .contains_key("transcribe_without_translation"));
+
+        settings.translate_to_english = false;
+        assert!(!settings.is_binding_enabled("transcribe_without_translation"));
+
+        settings.translate_to_english = true;
+        assert!(settings.is_binding_enabled("transcribe_without_translation"));
+    }
+
+    #[test]
+    fn the_post_process_binding_follows_post_processing() {
+        let mut settings = get_default_settings();
+
+        settings.post_process_enabled = false;
+        assert!(!settings.is_binding_enabled("transcribe_with_post_process"));
+
+        settings.post_process_enabled = true;
+        assert!(settings.is_binding_enabled("transcribe_with_post_process"));
+    }
+
+    #[test]
+    fn bindings_without_a_feature_are_always_enabled() {
+        let settings = get_default_settings();
+        assert!(settings.is_binding_enabled("transcribe"));
+        assert!(settings.is_binding_enabled("cancel"));
     }
 
     #[test]

@@ -348,6 +348,10 @@
           "transcribe_with_post_process": {
             "name": "Skrót postprocessingu",
             "description": "Opcjonalnie: Dedykowany skrót klawiszowy, który zawsze stosuje postprocessing AI do transkrypcji."
+          },
+          "transcribe_without_translation": {
+            "name": "Skrót transkrypcji bez tłumaczenia",
+            "description": "Opcjonalnie: osobny skrót, który zachowuje język, w którym mówisz, i pomija tłumaczenie na angielski dla tego nagrania."
           }
         },
         "errors": {
