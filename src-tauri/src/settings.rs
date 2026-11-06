@@ -1471,15 +1471,22 @@ fn self_update_possible() -> bool {
     true
 }
 
-/// Update checks are forced off (without touching the persisted setting) when
-/// `HANDY_DISABLE_UPDATER` is set — e.g. by the Nix package, since self-update
-/// can't work against an immutable /nix/store install — or when this build
-/// cannot install its own update (see `linux_self_update_possible`).
+/// Always true in this fork: the updater only knows upstream's releases, and
+/// installing one would replace the fork.
+const FORK_DISABLES_UPDATER: bool = true;
+
+/// Update checks are forced off (without touching the persisted setting) in
+/// this fork, and upstream also forces them off when `HANDY_DISABLE_UPDATER`
+/// is set (e.g. by the Nix package) or when the build cannot install its own
+/// update (see `linux_self_update_possible`).
 pub fn update_checks_forced_disabled() -> bool {
     use std::sync::OnceLock;
     static IS_UPDATER_DISABLED: OnceLock<bool> = OnceLock::new();
-    *IS_UPDATER_DISABLED
-        .get_or_init(|| utils::env_flag_enabled("HANDY_DISABLE_UPDATER") || !self_update_possible())
+    *IS_UPDATER_DISABLED.get_or_init(|| {
+        FORK_DISABLES_UPDATER
+            || utils::env_flag_enabled("HANDY_DISABLE_UPDATER")
+            || !self_update_possible()
+    })
 }
 
 /// Effective updater state: the user's stored preference, overridden to `false`
