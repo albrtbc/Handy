@@ -4,8 +4,10 @@ name: "Fork: Windows build"
 # demand, through upstream's reusable build workflow. The installers are kept
 # as run artifacts for 30 days. With "release" ticked they are also published
 # as a GitHub release tagged v<version>-fork.<n>, which can be downloaded
-# without signing in to GitHub. Upstream's other workflows are disabled in the
-# fork's Actions settings, so pushes don't start them.
+# without signing in to GitHub, and fork-cleanup.yml then deletes the run
+# artifacts and the older releases, runs and caches. Upstream's other
+# workflows are disabled in the fork's Actions settings, so pushes don't start
+# them.
 on:
   workflow_dispatch:
     inputs:
@@ -75,3 +77,11 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "Handy ${version} (fork ${n})" \
             --notes-file notes.md
+
+  cleanup:
+    if: inputs.release
+    needs: release
+    permissions:
+      actions: write
+      contents: write
+    uses: ./.github/workflows/fork-cleanup.yml
