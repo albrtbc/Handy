@@ -3,9 +3,10 @@ name: "Fork: cleanup"
 # Frees the fork's Actions storage and drops old public downloads. It deletes
 # every run artifact (the installers stay available in the releases), every
 # release and its tag except the newest `keep`, every finished workflow run
-# except the newest `keep` Windows builds, and the Actions caches that a newer
-# cache replaced or that the latest Windows build didn't use. It runs after
-# each published release, and by hand from the Actions tab.
+# except the newest `keep` Windows builds and the newest run of each disabled
+# workflow, and the Actions caches that a newer cache replaced or that the
+# latest Windows build didn't use. It runs after each published release, and
+# by hand from the Actions tab.
 on:
   workflow_dispatch:
     inputs:
@@ -56,14 +57,22 @@ jobs:
               gh release delete "$tag" --cleanup-tag --yes
             done
 
+      # Deleting the last run of a disabled inherited workflow (Main Branch
+      # Build) turns it from disabled to "deleted", which can't be disabled,
+      # and the next push to main re-enables and runs it. Keeping its newest
+      # run keeps it disabled.
       - name: Delete old workflow runs
         run: |
+          disabled=$(gh api "repos/$GH_REPO/actions/workflows?per_page=100" --paginate \
+            --jq '.workflows[] | select(.state | startswith("disabled")) | .id' | jq -sc .)
           gh api "repos/$GH_REPO/actions/runs?per_page=100" --paginate --jq '.workflow_runs[]' |
-            jq -rs --argjson keep "$KEEP" '
+            jq -rs --argjson keep "$KEEP" --argjson disabled "$disabled" '
               (map(select(.path | startswith(".github/workflows/fork-windows-build.yml")))
                 | sort_by(.created_at) | reverse | .[:$keep] | map(.id)) as $kept
+              | (map(select(.workflow_id | IN($disabled[])))
+                | group_by(.workflow_id) | map(max_by(.created_at).id)) as $anchors
               | .[]
-              | select(.status == "completed" and (.id | IN($kept[]) | not))
+              | select(.status == "completed" and (.id | IN($kept[], $anchors[]) | not))
               | "\(.id) \(.name)"' |
             while read -r id name; do
               echo "Deleting run $id ($name)"
